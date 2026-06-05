@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FireRisk Portugal Dashboard</title>
+  <meta name="description" content="Dashboard dinâmico de incêndios e risco florestal em Portugal com D3.js, Leaflet e APIs externas." />
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Biblioteca de KPIs">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">FR</div>
+        <div>
+          <p class="eyebrow">KPI Library</p>
+          <h1>FireRisk</h1>
+        </div>
+      </div>
+
+      <p class="sidebar-hint">Arraste um KPI para a área do dashboard ou clique para adicionar.</p>
+
+      <div class="progress-card">
+        <div class="progress-meta">
+          <strong><span id="added-count">0</span> de <span id="total-count">7</span> KPIs adicionados</strong>
+          <span id="progress-percent">0%</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+      </div>
+
+      <div id="kpi-list" class="kpi-list" role="list"></div>
+
+      <div class="sidebar-footer">
+        <span class="dot live"></span>
+        <span>Dados: IPMA · Fogos.pt · NASA FIRMS · Open-Meteo · OpenWeather FWI</span>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <section class="hero-card">
+        <div class="hero-layout">
+          <div class="hero-title-block">
+            <h2>Dashboard de Incêndios e Risco Florestal</h2>
+            <p>
+              Monitorização interativa de risco de incêndio, ocorrências ativas, hotspots de satélite e condições meteorológicas.
+            </p>
+
+            <div class="area-control" aria-label="Filtro geográfico dos dados de satélite">
+              <label for="area-select">Área analisada</label>
+              <select id="area-select">
+                <option value="portugal">Portugal Continental</option>
+                <option value="iberia">Península Ibérica</option>
+                <option value="westernEurope">Europa Ocidental</option>
+                <option value="westernMediterranean">Mediterrâneo Ocidental</option>
+              </select>
+              <small id="area-help">O filtro alarga os hotspots NASA FIRMS; os dados IPMA/Fogos.pt mantêm-se focados em Portugal.</small>
+            </div>
+
+            <div class="global-filters" aria-label="Filtros globais do dashboard">
+              <div class="filter-field">
+                <label for="source-filter">Camadas do mapa</label>
+                <select id="source-filter">
+                  <option value="all">Todas as fontes</option>
+                  <option value="fires">Só Fogos.pt</option>
+                  <option value="hotspots">Só NASA FIRMS</option>
+                  <option value="fwi">Só OpenWeather FWI</option>
+                  <option value="copernicus">Só EFFIS/GWIS (WMS)</option>
+                </select>
+              </div>
+              <div class="filter-field">
+                <label for="risk-filter">Risco mínimo IPMA/FWI</label>
+                <select id="risk-filter">
+                  <option value="0">Todos</option>
+                  <option value="2">Moderado ou superior</option>
+                  <option value="3">Elevado ou superior</option>
+                  <option value="4">Muito elevado ou superior</option>
+                  <option value="5">Máximo</option>
+                </select>
+              </div>
+              <div class="filter-field">
+                <label for="hotspot-days-select">Período NASA FIRMS</label>
+                <select id="hotspot-days-select">
+                  <option value="1">Último dia</option>
+                  <option value="3" selected>Últimos 3 dias</option>
+                  <option value="7">Últimos 7 dias</option>
+                  <option value="10">Últimos 10 dias</option>
+                </select>
+              </div>
+              <label class="filter-toggle" for="fwi-layer-toggle">
+                <input id="fwi-layer-toggle" type="checkbox" />
+                <span>OpenWeather FWI no mapa</span>
+              </label>
+              <label class="filter-toggle" for="copernicus-layer-toggle">
+                <input id="copernicus-layer-toggle" type="checkbox" checked />
+                <span>Camadas EFFIS/GWIS</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="actions" aria-label="Ações do dashboard">
+            <button id="refresh-btn" class="btn btn-primary" type="button">↻ Refresh</button>
+            <button id="save-btn" class="btn" type="button">✓ Save</button>
+            <button id="export-csv-btn" class="btn" type="button">⇩ CSV</button>
+            <button id="export-json-btn" class="btn" type="button">{} JSON</button>
+            <button id="reset-btn" class="btn btn-danger" type="button">× Reset</button>
+          </div>
+        </div>
+
+        <div id="status-message" class="status-message" role="status">
+          <span class="status-dot"></span>
+          A carregar dados externos e a preparar visualizações.
+        </div>
+
+        <div class="summary-grid" aria-label="Resumo dos dados">
+          <article class="metric-card">
+            <span>Ocorrências ativas</span>
+            <strong id="metric-fires">—</strong>
+          </article>
+          <article class="metric-card">
+            <span>Concelhos risco máximo</span>
+            <strong id="metric-max-risk">—</strong>
+          </article>
+          <article class="metric-card">
+            <span>Hotspots satélite</span>
+            <strong id="metric-hotspots">—</strong>
+          </article>
+          <article class="metric-card">
+            <span>Fontes em direto</span>
+            <strong id="metric-sources">—</strong>
+          </article>
+          <article class="metric-card">
+            <span>Última atualização</span>
+            <strong id="metric-updated">—</strong>
+          </article>
+        </div>
+      </section>
+
+      <section id="drop-zone" class="drop-zone" aria-label="Área de dashboard para largar KPIs">
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon" aria-hidden="true">🔥</div>
+          <h3>Arraste KPIs para construir o dashboard</h3>
+          <p>O estado pode ser guardado com Save. O Refresh atualiza os dados e redesenha os gráficos ativos.</p>
+        </div>
+        <div id="dashboard-grid" class="dashboard-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <div id="confirm-modal" class="confirm-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-dialog">
+      <button id="confirm-close" class="confirm-close" type="button" aria-label="Fechar confirmação">×</button>
+      <div class="confirm-icon" aria-hidden="true">!</div>
+      <div>
+        <h2 id="confirm-title">Limpar dashboard?</h2>
+        <p>Esta ação remove todos os gráficos do painel e apaga o estado guardado. Pode voltar a adicionar os KPIs a partir da lista lateral.</p>
+      </div>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="btn" type="button">Cancelar</button>
+        <button id="confirm-accept" class="btn btn-danger solid" type="button">Sim, limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

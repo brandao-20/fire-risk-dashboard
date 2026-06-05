@@ -1,0 +1,32 @@
+{
+  "name": "fire-risk-portugal-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard dinâmico de incêndios e risco florestal em Portugal com D3.js, Leaflet, SortableJS, localStorage e APIs externas.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js",
+    "validate": "node --check server.js"
+  },
+  "keywords": [
+    "d3",
+    "leaflet",
+    "dashboard",
+    "incendios",
+    "risco-florestal",
+    "ipma",
+    "fogos",
+    "firms"
+  ],
+  "author": "Gabriel Brandão",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
