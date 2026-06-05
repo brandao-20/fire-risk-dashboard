@@ -331,8 +331,8 @@ export function drawActiveFiresMap(container, data) {
   const fires = showLayer('fires') ? (data?.fires?.items || []) : [];
   const hotspots = showLayer('hotspots') ? (data?.hotspots?.items || []) : [];
   const riskPoints = [];
-  const fwiPoints = showLayer('fwi') ? (data?.openWeatherFwi?.items || []).filter((d) => Number(d.current?.dangerValue || 0) >= minRisk) : [];
-  const fwiIsLive = Boolean(data?.openWeatherFwi?.live);
+  const fwiPoints = [];
+  const fwiIsLive = false;
   const area = selectedAreaFromData(data);
   const focusBounds = areaBounds(area);
 
@@ -405,7 +405,6 @@ export function drawActiveFiresMap(container, data) {
     }
   }
 
-  registerExternalLayer('openWeatherFwiMap', 'OpenWeather FWI');
   registerExternalLayer('effisFwiWms', 'EFFIS Fire Weather Index');
   registerExternalLayer('effisActiveFiresWms', 'EFFIS VIIRS Hotspots');
   registerExternalLayer('effisBurntAreasWms', 'EFFIS Burnt Areas');
@@ -441,21 +440,6 @@ export function drawActiveFiresMap(container, data) {
     className: 'portugal-focus-rectangle'
   }).addTo(map);
 
-  fwiPoints.forEach((item) => {
-    if (!Number.isFinite(item.latitude) || !Number.isFinite(item.longitude)) return;
-    const danger = Number(item.current?.dangerValue || 0);
-    const meta = FWI_META[danger] || FWI_META[0];
-    const fwi = Number(item.current?.fwi || 0);
-    const radius = Math.max(7, Math.min(15, 6 + Math.sqrt(Math.max(1, fwi)) / 1.4));
-    addMapPoint(map, [item.latitude, item.longitude], {
-      radius,
-      color: '#6d28d9',
-      fillColor: meta.color,
-      fillOpacity: 0.76,
-      weight: 2.3,
-      className: 'map-point map-point-fwi'
-    }, () => fwiPopupHtml(item, fwiIsLive), selectPoint);
-  });
 
   fires.forEach((fire) => {
     if (!Number.isFinite(fire.latitude) || !Number.isFinite(fire.longitude)) return;
@@ -486,7 +470,7 @@ export function drawActiveFiresMap(container, data) {
     }, () => hotspotPopupHtml(hotspot), selectPoint);
   });
 
-  const boundsItems = [...fires, ...hotspots, ...fwiPoints]
+  const boundsItems = [...fires, ...hotspots]
     .filter((d) => Number.isFinite(d.latitude) && Number.isFinite(d.longitude));
 
   function applyMapView() {
@@ -515,15 +499,13 @@ export function drawActiveFiresMap(container, data) {
   const legendItems = [
     showLayer('fires') ? '<span class="legend-item"><span class="legend-swatch fire-swatch"></span>Fogos.pt</span>' : '',
     showLayer('hotspots') ? '<span class="legend-item"><span class="legend-swatch hotspot-swatch"></span>NASA FIRMS</span>' : '',
-    showLayer('fwi') ? `<span class="legend-item"><span class="legend-swatch fwi-swatch"></span>${fwiIsLive ? 'OpenWeather FWI' : 'FWI local'}</span>` : '',
     (layerMode === 'all' || layerMode === 'copernicus') && activeExternalLayerLabels.length ? '<span class="legend-item"><span class="legend-swatch copernicus-swatch"></span>EFFIS/GWIS WMS</span>' : ''
   ].filter(Boolean).join('');
   footer.innerHTML = `
     ${legendItems}
-    <span>${layerMode === 'copernicus' ? 'Modo WMS externo: sem pontos clicáveis nesta vista' : `${fires.length} ocorrência(s) · ${hotspots.length} hotspot(s) · ${fwiPoints.length} ponto(s) FWI`}</span>
+    <span>${layerMode === 'copernicus' ? 'Modo WMS externo: sem pontos clicáveis nesta vista' : `${fires.length} ocorrência(s) · ${hotspots.length} hotspot(s)`}</span>
     <span class="area-legend-pill">Área: ${escapeHtml(area.label)}</span>
     ${minRisk > 0 ? `<span class="area-legend-pill risk-filter-pill">Risco mínimo: ${escapeHtml(RISK_META[minRisk]?.label || minRisk)}</span>` : ''}
-    ${externalLayers.openWeatherFwiMap?.enabled ? '<span class="area-legend-pill api-pill">OpenWeather FWI tile disponível</span>' : ''}
     ${activeExternalLayerLabels.length ? `<span class="area-legend-pill copernicus-pill">EFFIS/GWIS: ${activeExternalLayerLabels.length} camada(s) · WMS ${escapeHtml(data?.externalLayers?.wmsDate || 'sem data')}</span>` : ''}
   `;
   container.appendChild(footer);
@@ -961,6 +943,5 @@ export const CHART_RENDERERS = {
   'risk-donut': drawRiskDonut,
   'top-risk-bar': drawTopRiskBar,
   'weather-scatter': drawWeatherScatter,
-  'evolution-line': drawEvolutionLine,
-  'openweather-fwi': drawOpenWeatherFwi
+  'evolution-line': drawEvolutionLine
 };

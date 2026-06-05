@@ -40,13 +40,6 @@ export const KPIS = [
     description: 'Evolução temporal das deteções de fogo ativo registadas por satélite na área selecionada.',
     chartType: 'D3 line chart',
     size: 'normal'
-  },
-  {
-    id: 'openweather-fwi',
-    title: 'Fire Weather Index Global',
-    description: 'Índice FWI atual e previsão a 5 dias por pontos de referência da área selecionada através da OpenWeather.',
-    chartType: 'D3 FWI bars',
-    size: 'normal'
   }
 ];
 

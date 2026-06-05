@@ -33,7 +33,6 @@ const els = {
   sourceFilter: document.getElementById('source-filter'),
   riskFilter: document.getElementById('risk-filter'),
   hotspotDaysSelect: document.getElementById('hotspot-days-select'),
-  fwiLayerToggle: document.getElementById('fwi-layer-toggle'),
   copernicusLayerToggle: document.getElementById('copernicus-layer-toggle')
 };
 
@@ -139,7 +138,6 @@ function bindActions() {
   els.hotspotDaysSelect?.addEventListener('change', refreshData);
   els.sourceFilter?.addEventListener('change', renderFilteredDashboard);
   els.riskFilter?.addEventListener('change', renderFilteredDashboard);
-  els.fwiLayerToggle?.addEventListener('change', renderFilteredDashboard);
   els.copernicusLayerToggle?.addEventListener('change', renderFilteredDashboard);
 
   if (els.confirmCancel) els.confirmCancel.addEventListener('click', closeResetConfirmModal);
@@ -214,7 +212,6 @@ function applySavedPreferences(preferences = {}) {
   if (filters.source && els.sourceFilter) els.sourceFilter.value = normalizeMapSource(filters.source);
   if (filters.minRisk != null && els.riskFilter) els.riskFilter.value = String(filters.minRisk);
   if (filters.hotspotDays && els.hotspotDaysSelect) els.hotspotDaysSelect.value = String(filters.hotspotDays);
-  if (filters.showFwiLayer != null && els.fwiLayerToggle) els.fwiLayerToggle.checked = Boolean(filters.showFwiLayer);
   if (filters.showCopernicusLayers != null && els.copernicusLayerToggle) els.copernicusLayerToggle.checked = Boolean(filters.showCopernicusLayers);
   updateAreaHelp();
 }
@@ -222,7 +219,7 @@ function applySavedPreferences(preferences = {}) {
 async function refreshData() {
   const filters = getCurrentFilters();
   const areaLabel = MAP_AREAS[filters.area]?.label || 'Portugal Continental';
-  setLoading(true, `A atualizar dados externos para ${areaLabel}: IPMA, Fogos.pt, NASA FIRMS, Open-Meteo, OpenWeather FWI e camadas EFFIS/GWIS...`);
+  setLoading(true, `A atualizar dados externos para ${areaLabel}: IPMA, Fogos.pt, NASA FIRMS, Open-Meteo e camadas EFFIS/GWIS...`);
   try {
     dashboardData = await loadDashboardData(filters.area, { days: filters.hotspotDays });
     renderFilteredDashboard();
@@ -320,13 +317,12 @@ function footerContent(kpiId, data) {
   const updated = new Date(data.summary.generatedAt).toLocaleString('pt-PT');
   const filters = data.filters || getCurrentFilters();
   const sources = {
-    'active-map': `${data.fires.source} · ${data.hotspots.source} · ${data.openWeatherFwi?.source || 'OpenWeather Fire Weather Index'}`,
+    'active-map': `${data.fires.source} · ${data.hotspots.source}`,
     'risk-map': data.risk.source,
     'risk-donut': data.risk.source,
     'top-risk-bar': data.risk.source,
     'weather-scatter': `${data.weather.source} · ${data.risk.source}`,
-    'evolution-line': `${data.hotspots.source} · ${data.fires.source}`,
-    'openweather-fwi': data.openWeatherFwi?.source || 'OpenWeather Fire Weather Index'
+    'evolution-line': `${data.hotspots.source} · ${data.fires.source}`
   };
   const filterText = `Filtros: ${filterSummary(filters)}`;
   return `<span>Fonte: ${sources[kpiId] || 'APIs externas'}</span><span>${filterText}</span><span>Atualizado: ${updated}</span>`;
@@ -362,7 +358,7 @@ function getSelectedArea() {
 }
 
 function normalizeMapSource(source) {
-  const allowed = new Set(['all', 'fires', 'hotspots', 'fwi', 'copernicus']);
+  const allowed = new Set(['all', 'fires', 'hotspots', 'copernicus']);
   return allowed.has(source) ? source : 'all';
 }
 
@@ -378,7 +374,6 @@ function getCurrentFilters() {
     source: normalizeMapSource(els.sourceFilter?.value || 'all'),
     minRisk: Number(els.riskFilter?.value || 0),
     hotspotDays: Number(els.hotspotDaysSelect?.value || 3),
-    showFwiLayer: Boolean(els.fwiLayerToggle?.checked),
     showCopernicusLayers: Boolean(els.copernicusLayerToggle?.checked)
   };
 }
@@ -392,13 +387,12 @@ function getCurrentPreferences() {
 
 function buildViewData(data, filters) {
   // O filtro de fonte controla apenas o mapa. O filtro de risco mínimo é aplicado
-  // aos dados que possuem classe de risco explícita: IPMA e OpenWeather FWI.
+  // aos dados IPMA, que possuem classe de risco explícita.
   const fires = [...(data.fires?.items || [])];
   const hotspots = [...(data.hotspots?.items || [])];
   const minRisk = Number(filters.minRisk || 0);
   const riskItems = [...(data.risk?.items || [])].filter((item) => Number(item.risk || 0) >= minRisk);
   const riskTomorrowItems = [...(data.riskTomorrow?.items || [])].filter((item) => Number(item.risk || 0) >= minRisk);
-  const fwiItems = [...(data.openWeatherFwi?.items || [])].filter((item) => Number(item.current?.dangerValue || 0) >= minRisk);
 
   const riskMax = riskItems.filter((d) => d.risk === 5).length;
   const riskHighOrMore = riskItems.filter((d) => d.risk >= 3).length;
@@ -408,9 +402,6 @@ function buildViewData(data, filters) {
   const totalAerial = fires.reduce((acc, d) => acc + Number(d.aerial || 0), 0);
   const externalLayers = structuredCloneSafe(data.externalLayers || {});
   if (externalLayers.layers) {
-    if (externalLayers.layers.openWeatherFwiMap) {
-      externalLayers.layers.openWeatherFwiMap.enabled = Boolean(filters.showFwiLayer && externalLayers.layers.openWeatherFwiMap.enabled);
-    }
     if (externalLayers.layers.effisFwiWms) {
       externalLayers.layers.effisFwiWms.enabled = Boolean((filters.showCopernicusLayers || filters.source === 'copernicus') && externalLayers.layers.effisFwiWms.enabled);
     }
@@ -432,7 +423,6 @@ function buildViewData(data, filters) {
     hotspots: { ...data.hotspots, items: hotspots },
     risk: { ...data.risk, items: riskItems },
     riskTomorrow: { ...data.riskTomorrow, items: riskTomorrowItems },
-    openWeatherFwi: { ...data.openWeatherFwi, items: fwiItems },
     externalLayers,
     summary: {
       ...data.summary,
@@ -459,7 +449,10 @@ function structuredCloneSafe(value) {
 
 function updateSummary(data) {
   const summary = data.summary;
-  const liveSources = dashboardData?.summary?.liveSources || {};
+  const rawLiveSources = dashboardData?.summary?.liveSources || {};
+  const liveSources = Object.fromEntries(
+    Object.entries(rawLiveSources).filter(([key]) => key !== 'openWeatherFwi')
+  );
   const live = Object.values(liveSources).filter(Boolean).length;
   const total = Object.keys(liveSources).length;
   els.metricFires.textContent = summary.activeFires;
@@ -475,17 +468,17 @@ function updateSourceHealth(data) {
     ipma: 'IPMA',
     fogos: 'Fogos.pt',
     firms: 'NASA FIRMS',
-    openMeteo: 'Open-Meteo',
-    openWeatherFwi: 'OpenWeather FWI'
+    openMeteo: 'Open-Meteo'
   };
   const sourcePayload = {
     ipma: data.risk,
     fogos: data.fires,
     firms: data.hotspots,
-    openMeteo: data.weather,
-    openWeatherFwi: data.openWeatherFwi
+    openMeteo: data.weather
   };
-  els.sourceHealth.innerHTML = Object.entries(data.summary.liveSources).map(([key, live]) => {
+  els.sourceHealth.innerHTML = Object.entries(data.summary.liveSources)
+    .filter(([key]) => key !== 'openWeatherFwi')
+    .map(([key, live]) => {
     const item = sourcePayload[key] || {};
     const title = live ? 'Fonte em direto' : (item.error || 'Fonte em fallback');
     return `<span class="source-pill ${live ? 'live' : 'fallback'}" title="${escapeHtml(title)}"><i></i>${labels[key] || key}<strong>${live ? 'direto' : 'fallback'}</strong></span>`;
@@ -544,11 +537,17 @@ function exportDashboardJson() {
     widgets: getActiveWidgetIds(),
     preferences: getCurrentPreferences(),
     summary: viewData?.summary || null,
-    sourceStatus: dashboardData?.summary?.liveSources || null
+    sourceStatus: filteredSourceStatus(dashboardData?.summary?.liveSources || null)
   };
   const stamp = timestampForFile();
   downloadText(`fire-risk-dashboard-state-${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
   showToast('Estado do dashboard exportado para JSON.');
+}
+
+
+function filteredSourceStatus(status) {
+  if (!status) return null;
+  return Object.fromEntries(Object.entries(status).filter(([key]) => key !== 'openWeatherFwi'));
 }
 
 function collectExportRows(data) {
@@ -626,20 +625,6 @@ function collectExportRows(data) {
     });
   });
 
-  (data.openWeatherFwi?.items || []).forEach((fwi) => {
-    rows.push({
-      tipo: 'openweather_fwi',
-      area,
-      id: fwi.id,
-      nome: fwi.label,
-      latitude: fwi.latitude,
-      longitude: fwi.longitude,
-      fwi: fwi.current?.fwi,
-      classe: fwi.current?.dangerLabel,
-      previsao_5_dias: (fwi.forecast || []).map((d) => `${d.time || ''}:${d.fwi}`).join('|'),
-      fonte: data.openWeatherFwi.source
-    });
-  });
 
   return rows;
 }
@@ -683,7 +668,6 @@ function filterSummary(filters) {
     all: 'todas as fontes no mapa',
     fires: 'só Fogos.pt no mapa',
     hotspots: 'só NASA FIRMS no mapa',
-    fwi: 'só OpenWeather FWI no mapa',
     copernicus: 'só camadas EFFIS/GWIS (WMS) no mapa'
   };
   const riskLabel = Number(filters.minRisk) > 0 ? `${RISK_META[filters.minRisk]?.label || filters.minRisk}+` : 'todos os riscos';

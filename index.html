@@ -26,7 +26,7 @@
 
       <div class="progress-card">
         <div class="progress-meta">
-          <strong><span id="added-count">0</span> de <span id="total-count">7</span> KPIs adicionados</strong>
+          <strong><span id="added-count">0</span> de <span id="total-count">6</span> KPIs adicionados</strong>
           <span id="progress-percent">0%</span>
         </div>
         <div class="progress-track" aria-hidden="true">
@@ -38,7 +38,7 @@
 
       <div class="sidebar-footer">
         <span class="dot live"></span>
-        <span>Dados: IPMA · Fogos.pt · NASA FIRMS · Open-Meteo · OpenWeather FWI</span>
+        <span>Dados: IPMA · Fogos.pt · NASA FIRMS · Open-Meteo · EFFIS/GWIS</span>
       </div>
     </aside>
 
@@ -69,12 +69,11 @@
                   <option value="all">Todas as fontes</option>
                   <option value="fires">Só Fogos.pt</option>
                   <option value="hotspots">Só NASA FIRMS</option>
-                  <option value="fwi">Só OpenWeather FWI</option>
                   <option value="copernicus">Só EFFIS/GWIS (WMS)</option>
                 </select>
               </div>
               <div class="filter-field">
-                <label for="risk-filter">Risco mínimo IPMA/FWI</label>
+                <label for="risk-filter">Risco mínimo IPMA</label>
                 <select id="risk-filter">
                   <option value="0">Todos</option>
                   <option value="2">Moderado ou superior</option>
@@ -92,10 +91,6 @@
                   <option value="10">Últimos 10 dias</option>
                 </select>
               </div>
-              <label class="filter-toggle" for="fwi-layer-toggle">
-                <input id="fwi-layer-toggle" type="checkbox" />
-                <span>OpenWeather FWI no mapa</span>
-              </label>
               <label class="filter-toggle" for="copernicus-layer-toggle">
                 <input id="copernicus-layer-toggle" type="checkbox" checked />
                 <span>Camadas EFFIS/GWIS</span>
